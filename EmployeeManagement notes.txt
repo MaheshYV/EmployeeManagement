@@ -1,0 +1,12 @@
+POST http://localhost:8080/employee/create
+{
+"firstName" : "Rob",
+"lastName" : "Jonson",
+"emailId" : "Rob@sample.com"
+}
+
+curl -X POST -H 'Content-Type: application/json' -i http://localhost:8080/employee/create --data '{
+"firstName" : "Rob",
+"lastName" : "Jonson",
+"emailId" : "Rob@sample.com"
+}'
