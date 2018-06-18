@@ -7,6 +7,7 @@ import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ import com.sample.exception.EmployeeCreateException;
 import com.sample.exception.EmployeeException;
 import com.sample.exception.EmployeeNotFoundException;
 import com.sample.request.EmployeeRequest;
+import com.sample.service.EmployeeProducer;
 import com.sample.service.EmployeeService;
 
 @RestController
@@ -34,6 +36,12 @@ public class EmployeeController {
 
 	@Autowired
 	private EmployeeService employeeService;
+
+	@Autowired
+	private EmployeeProducer employeeProducer;
+
+	@Value("${queue.employee}")
+	private String queueName;
 
 	/***
 	 * Returns all the employees
@@ -51,10 +59,11 @@ public class EmployeeController {
 		ResponseEntity<?> responseEntity = null;
 
 		try {
-			employeeService.createEmployee(employeeRequest);
-			responseEntity = new ResponseEntity<>("Employee " + employeeRequest.getFirstName() + " " + employeeRequest.getLastName() + " succesfully created",
-					
-					HttpStatus.CREATED);
+			Employee employee = employeeService.createEmployee(employeeRequest);
+			responseEntity = new ResponseEntity<>("Employee " + employeeRequest.getFirstName() + " "
+					+ employeeRequest.getLastName() + " succesfully created", HttpStatus.CREATED);
+			employeeProducer.sendToQueue(queueName, employee);
+
 		} catch (EmployeeCreateException e) {
 			logger.error(e.getMessage());
 			responseEntity = new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -71,8 +80,8 @@ public class EmployeeController {
 
 		try {
 			employeeService.updateEmployee(employeeId, employeeRequest);
-			responseEntity = new ResponseEntity<>("Employee " + employeeRequest.getFirstName() +  " " + employeeRequest.getLastName() + " succesfuly updated",
-					HttpStatus.OK);
+			responseEntity = new ResponseEntity<>("Employee " + employeeRequest.getFirstName() + " "
+					+ employeeRequest.getLastName() + " succesfuly updated", HttpStatus.OK);
 		} catch (EmployeeNotFoundException e) {
 			logger.error(e.getMessage());
 			responseEntity = new ResponseEntity<>(e, HttpStatus.NOT_FOUND);
@@ -93,7 +102,8 @@ public class EmployeeController {
 
 		try {
 			employeeService.deleteEmployee(employeeId);
-			responseEntity = new ResponseEntity<>("Employee " + employeeId + " succesfuly deleted", HttpStatus.NO_CONTENT);
+			responseEntity = new ResponseEntity<>("Employee " + employeeId + " succesfuly deleted",
+					HttpStatus.NO_CONTENT);
 		} catch (EmployeeException e) {
 			logger.error(e.getMessage());
 			responseEntity = new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);

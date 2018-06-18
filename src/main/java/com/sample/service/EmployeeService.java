@@ -9,6 +9,7 @@ import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.sample.dao.EmployeeRepository;
@@ -24,15 +25,21 @@ public class EmployeeService {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	@Autowired
+	private EmployeeProducer employeeProducer;
+	
+	@Autowired
 	private EmployeeRepository employeeRepository;
 
+	@Value("${queue.employee}")
+	private String queueName;
+	
 	public List<Employee> getEmployeeList() {
 		logger.info("getEmployeeList method");
 		return employeeRepository.findAll();
 	} // end getEmployeeList method
 
 	@Transactional
-	public void createEmployee(@NotNull EmployeeRequest employeeRequest) throws EmployeeCreateException {
+	public Employee createEmployee(@NotNull EmployeeRequest employeeRequest) throws EmployeeCreateException {
 
 		logger.info("Start of createEmployee method");
 		Employee employee = new Employee();
@@ -41,13 +48,18 @@ public class EmployeeService {
 
 		try {
 			employeeRepository.save(employee);
+			// send employee request json to queue
 		} catch (Exception e) {
 			String errorMessage = "Employee " + "'" + employeeRequest.getFirstName() + " "
 					+ employeeRequest.getLastName() + "'" + " cannot be created";
 			logger.error(errorMessage);
 			throw new EmployeeCreateException(errorMessage);
 		}
+		
 		logger.info("End of createEmployee method");
+		
+		return employee;
+		
 	} // end createEmployee method
 
 	public void updateEmployee(@NotNull Long employeeId, @NotNull EmployeeRequest employeeRequest)
